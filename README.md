@@ -152,6 +152,27 @@ This project is open source and available under the [MIT License](LICENSE).
 - **GitHub**: [@plva](https://github.com/plva)
 - **Issues**: [GitHub Issues](https://github.com/plva/algorithm-visualize/issues)
 
+## Sanity Check
+
+To verify that your environment is set up correctly and all workflows are working, run:
+
+```bash
+npm run sanity
+```
+
+This script will:
+- Run all tests
+- Build the project for production
+- Report success if everything passes
+
+You should see:
+
+```
+🧪 Running tests...
+🏗️ Building project...
+✅ All sanity checks passed!
+```
+
 ---
 
 ⭐ If you find this project helpful, please give it a star on GitHub! 
