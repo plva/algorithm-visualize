@@ -29,7 +29,14 @@
     /* Triangle display */
     #triangleContainer { margin-top: 32px; }
     .triangle-row { display: flex; justify-content: center; gap: 8px; margin: 4px 0; }
-    .triangle-cell { min-width: 32px; padding: 4px 6px; border: 1px solid #aaa; border-radius: 3px; text-align: center; }
+    .triangle-cell { 
+      min-width: 32px; 
+      padding: 4px 6px; 
+      border: 1px solid #aaa; 
+      border-radius: 3px; 
+      text-align: center;
+      transition: background-color 0.3s ease;
+    }
     /* Color distinction */
     .triangle-row.past   .triangle-cell { background: #f7f7f7; }
     .triangle-row.active .triangle-cell { background: #d0f0ff; }
@@ -85,6 +92,16 @@ let currRow = [];      // underlying array we mutate
 let stepPtr = 0;       // index of next step to execute
 let autoTimer = null;  // interval handle for autoplay
 let lastRowDiv = null; // reference to last (active) triangle row div
+let maxValue = 1;      // track the maximum value seen so far for heatmap
+
+function getHeatmapColor(value, maxVal) {
+  if (maxVal <= 1) return '#ffffff'; // white for base case
+  
+  const ratio = value / maxVal;
+  // Simple white to green gradient
+  const greenIntensity = Math.floor(255 * ratio);
+  return `rgb(255, ${255 - greenIntensity}, 255)`;
+}
 
 function renderRow(arr, idxA = -1, idxB = -1) {
   rowContainer.innerHTML = '';
@@ -111,11 +128,26 @@ function addTriangleRow(arr, isActive) {
     const c = document.createElement('div');
     c.className = 'triangle-cell';
     c.textContent = v;
+    // Only apply heatmap color to the active (latest) row
+    if (isActive) {
+      c.style.backgroundColor = getHeatmapColor(v, maxValue);
+    }
     rowDiv.appendChild(c);
   });
   triangleContainer.appendChild(rowDiv);
 
   if (isActive) lastRowDiv = rowDiv;
+}
+
+function updateLatestRowHeatmap() {
+  // Only update the latest (active) row with new heatmap colors
+  if (lastRowDiv) {
+    const cells = lastRowDiv.querySelectorAll('.triangle-cell');
+    cells.forEach(cell => {
+      const value = parseInt(cell.textContent);
+      cell.style.backgroundColor = getHeatmapColor(value, maxValue);
+    });
+  }
 }
 
 // Build the list of steps, capturing rowSize per step
@@ -126,6 +158,7 @@ function buildSteps(target) {
   steps        = [];
   currRow      = [1];
   lastRowDiv   = null;
+  maxValue     = 1;           // reset max value
   addTriangleRow([1], false);               // base row is past immediately
 
   for (let r = 1; r <= target; r++) {
@@ -164,6 +197,13 @@ function nextStep() {
   // Perform update after a short delay so highlight is visible
   setTimeout(() => {
     currRow[j] = newVal;
+    
+    // Update max value if necessary
+    if (newVal > maxValue) {
+      maxValue = newVal;
+      updateLatestRowHeatmap();
+    }
+    
     renderRow(currRow.slice(0, rowSize), -1, j); // highlight updated cell in green
     msg.textContent = `row[${j}] updated to ${newVal}`;
   }, 200);
