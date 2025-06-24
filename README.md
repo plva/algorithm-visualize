@@ -12,7 +12,7 @@ Interactive step-by-step visualizations of algorithms and data structures. This 
 
 ## 🚀 Live Demo
 
-Visit the live site: [https://yourusername.github.io/algorithm-visualize](https://yourusername.github.io/algorithm-visualize)
+Visit the live site: [https://plva.github.io/algorithm-visualize](https://plva.github.io/algorithm-visualize)
 
 ## 📋 Available Visualizations
 
@@ -56,7 +56,7 @@ algorithm-visualize/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/yourusername/algorithm-visualize.git
+   git clone https://github.com/plva/algorithm-visualize.git
    cd algorithm-visualize
    ```
 
@@ -145,8 +145,8 @@ This project is open source and available under the [MIT License](LICENSE).
 
 ## 📞 Contact
 
-- **GitHub**: [@yourusername](https://github.com/yourusername)
-- **Issues**: [GitHub Issues](https://github.com/yourusername/algorithm-visualize/issues)
+- **GitHub**: [@plva](https://github.com/plva)
+- **Issues**: [GitHub Issues](https://github.com/plva/algorithm-visualize/issues)
 
 ---
 

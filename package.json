@@ -17,15 +17,15 @@
     "html5",
     "css3"
   ],
-  "author": "Your Name",
+  "author": "plva",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/algorithm-visualize.git"
+    "url": "https://github.com/plva/algorithm-visualize.git"
   },
-  "homepage": "https://yourusername.github.io/algorithm-visualize",
+  "homepage": "https://plva.github.io/algorithm-visualize",
   "bugs": {
-    "url": "https://github.com/yourusername/algorithm-visualize/issues"
+    "url": "https://github.com/plva/algorithm-visualize/issues"
   },
   "engines": {
     "node": ">=14.0.0"
