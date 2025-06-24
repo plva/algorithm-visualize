@@ -13,25 +13,6 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        
-    - name: Install dependencies (if any)
-      run: |
-        if [ -f package.json ]; then
-          npm ci
-        fi
-        
-    - name: Build (if needed)
-      run: |
-        if [ -f package.json ] && npm run build; then
-          echo "Build completed"
-        else
-          echo "No build step required"
-        fi
         
     - name: Deploy to GitHub Pages
       if: github.ref == 'refs/heads/main'
