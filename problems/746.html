@@ -1,0 +1,166 @@
+**Overview & Controls**
+Enter a comma-separated list of step costs and press **Run**. A staircase display will appear. Use **Prev ◀ / ▶ Next** buttons or the **slider** to step through the dynamic-programming iterations.
+Colors:
+
+* 🟧 (target)\*\* – the cost we’re about to pay at this iteration
+* ⬚ (candidate)\*\* – the two choices (from i-1 or i-2) we’re comparing
+* 🟩 (chosen)\*\* – steps that belong to the final minimum-cost path to the top
+
+Below the animation you’ll find the exact Python algorithm being visualised.
+
+```html
+<!-- README:
+  1. Paste costs like 10,15,20 or 1,100,1,1,1,100,1,1,100,1 and click “Run”.
+  2. Step through frames with buttons or slider.
+  3. Orange = current target cost; grey outline = two candidate steps; green = steps on the final optimal path.
+  4. Extend by tweaking computeStates() or render() as desired. -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Min-Cost Climbing Stairs – Visualiser</title>
+<style>
+ :root{font-family:system-ui,sans-serif}
+ body{margin:0;padding:1rem;line-height:1.4}
+ h1{margin-top:0;font-size:1.3rem}
+ input[type=text]{padding:.35rem;font-size:1rem;width:18rem}
+ button{padding:.35rem .7rem;margin:0 .2rem;font-size:.9rem;cursor:pointer}
+ #staircase{display:flex;flex-wrap:wrap;gap:.3rem;margin-top:.9rem}
+ .step{padding:.45rem .7rem;border-radius:.35rem;background:#f0f0f0;min-width:2.6rem;text-align:center;position:relative}
+ .target{background:#ffd280}
+ .candidate{outline:2px solid #888}
+ .chosen{background:#b7eeb7}
+ #explain{margin-top:.9rem;padding:.7rem;background:#f9f9f9;border-left:4px solid #ccc}
+ #controls{margin-top:1rem}
+ #slider{width:100%}
+ .hidden{display:none}
+ pre{background:#f5f5f5;padding:.9rem;overflow-x:auto}
+ code{font-family:ui-monospace,monospace;font-size:.9rem}
+</style>
+</head>
+<body>
+<h1>Min-Cost Climbing Stairs – Step-by-Step Visualiser</h1>
+
+<label>Cost array:
+  <input id="costInput" type="text" placeholder="e.g. 10,15,20">
+</label>
+<button id="runBtn">Run</button>
+<span id="error" style="color:red;margin-left:.6rem"></span>
+
+<div id="viz" class="hidden">
+  <div id="staircase"></div>
+  <div id="explain"></div>
+
+  <div id="controls">
+    <button id="prevBtn">◀ Prev</button>
+    <input id="slider" type="range" min="0" value="0">
+    <button id="nextBtn">Next ▶</button>
+    <span id="frameLabel"></span>
+  </div>
+
+  <h2>Algorithm (Python)</h2>
+<pre><code>def minCostClimbingStairs(cost):
+    down_one = down_two = 0
+    for i in range(2, len(cost) + 1):
+        temp = down_one
+        down_one = min(down_one + cost[i - 1],
+                       down_two + cost[i - 2])
+        down_two = temp
+    return down_one
+</code></pre>
+</div>
+
+<script>
+// ---------- DP visual states + optimal path ----------
+function computeStatesAndPath(cost){
+  const states=[], n=cost.length;
+  let downOne=0, downTwo=0;
+  states.push({i:1, downOne, downTwo});       // virtual frame 0
+
+  for(let i=2;i<=n;i++){
+    const cand1=downOne+cost[i-1];
+    const cand2=downTwo+cost[i-2];
+    const next=Math.min(cand1,cand2);
+    states.push({i,downOne:next,downTwo:downOne,cand1,cand2});
+    downTwo=downOne;
+    downOne=next;
+  }
+
+  // ----- Separate DP to recover optimal path -----
+  const dp=new Array(n).fill(0), prev=new Array(n).fill(-1);
+  dp[0]=cost[0]; dp[1]=cost[1];
+  for(let i=2;i<n;i++){
+    if(dp[i-1]<=dp[i-2]){ dp[i]=cost[i]+dp[i-1]; prev[i]=i-1; }
+    else               { dp[i]=cost[i]+dp[i-2]; prev[i]=i-2; }
+  }
+  // choose last step (n or n-1) giving min
+  let last = dp[n-1]<=dp[n-2]? n-1 : n-2;
+  const path=[];
+  while(last>=0){ path.push(last); last=prev[last]; }
+  return {states, path};
+}
+
+// ---------- DOM helpers ----------
+const $=id=>document.getElementById(id);
+const staircaseEl=$("staircase"), explainEl=$("explain"),
+      sliderEl=$("slider"), frameLabel=$("frameLabel");
+let costArr=[], states=[], pathIndices=[];
+
+function render(frame){
+  const st=states[frame];
+  staircaseEl.innerHTML="";
+  costArr.forEach((c,idx)=>{
+    const d=document.createElement("div");
+    d.textContent=`${idx}:${c}`;
+    d.className="step";
+    if(pathIndices.includes(idx)) d.classList.add("chosen");
+    if(idx===st.i-1) d.classList.add("target");
+    if(idx===st.i-1||idx===st.i-2) d.classList.add("candidate");
+    staircaseEl.appendChild(d);
+  });
+  // explanation
+  if(frame===0){
+    explainEl.textContent="Initial state: down_one = down_two = 0 (standing before steps 0 and 1).";
+  }else{
+    explainEl.innerHTML=`
+      <strong>Frame ${frame}</strong> → computing cost to stand at virtual index <strong>${st.i}</strong><br>
+      Candidate&nbsp;1 (from i-1): ${st.cand1}<br>
+      Candidate&nbsp;2 (from i-2): ${st.cand2}<br>
+      Chosen min = <strong>${st.downOne}</strong>
+    `;
+    if(frame===states.length-1){
+      explainEl.innerHTML+=`<br><br><em>Optimal path indices (paid steps):</em> ${pathIndices.slice().reverse().join(" → ")}`;
+    }
+  }
+  frameLabel.textContent=`Frame ${frame}/${states.length-1}`;
+  sliderEl.value=frame;
+}
+
+function initControls(){
+  sliderEl.max=states.length-1;
+  sliderEl.oninput=()=>render(+sliderEl.value);
+  $("prevBtn").onclick=()=>{sliderEl.value=Math.max(0,+sliderEl.value-1);sliderEl.oninput()};
+  $("nextBtn").onclick=()=>{sliderEl.value=Math.min(states.length-1,+sliderEl.value+1);sliderEl.oninput()};
+}
+
+// ---------- Run button ----------
+$("runBtn").onclick=()=>{
+  $("error").textContent="";
+  const raw=$("costInput").value.trim();
+  if(!raw){$("error").textContent="Enter comma-separated numbers.";return;}
+  costArr=raw.split(/[\s,]+/).map(Number);
+  if(costArr.some(isNaN)||costArr.length<2){
+    $("error").textContent="Invalid input or too few numbers.";return;
+  }
+  const res=computeStatesAndPath(costArr);
+  states=res.states; pathIndices=res.path;
+  $("viz").classList.remove("hidden");
+  initControls(); render(0);
+};
+
+// demo seed
+$("costInput").value="10,15,20";
+</script>
+</body>
+</html>
+```
