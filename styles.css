@@ -88,6 +88,26 @@ body {
 }
 
 .problems-container {
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+}
+
+/* Category sections */
+.category-section {
+    margin-bottom: 2rem;
+}
+
+.category-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--primary-color);
+    padding-bottom: 0.5rem;
+}
+
+.category-problems {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
     gap: 1.5rem;

@@ -17,7 +17,10 @@ Visit the live site: [https://plva.github.io/algorithm-visualize](https://plva.g
 ## 📋 Available Visualizations
 
 ### Currently Available
+
+#### Dynamic Programming
 - **min-cost-climbing-stairs**: Dynamic programming solution with step-by-step visualization of minimum cost path calculation
+- **pascals-triangle-row**: Visualize the generation of a specific row in Pascal's Triangle using dynamic programming
 
 ### Coming Soon
 - More dynamic programming problems
@@ -42,7 +45,8 @@ algorithm-visualize/
 ├── script.js           # Main JavaScript functionality
 ├── README.md           # This file
 ├── problems/           # Individual problem visualizations
-│   └── min-cost-climbing-stairs.html  # Min Cost Climbing Stairs visualization
+│   ├── min-cost-climbing-stairs.html  # Min Cost Climbing Stairs visualization
+│   └── pascals-triangle-row.html      # Pascal's Triangle Row visualization
 └── .gitignore          # Git ignore file
 ```
 
