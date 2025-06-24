@@ -8,6 +8,8 @@
     #controls { margin-bottom: 12px; }
     input { width: 60px; padding: 4px; }
     button { margin-left: 6px; padding: 4px 8px; }
+    .time-slider { width: 200px; margin-left: 12px; }
+    #timeDisplay { margin-left: 8px; font-family: monospace; }
 
     /* Current row display */
     #rowContainer { display: flex; gap: 8px; margin-top: 20px; flex-wrap: wrap; }
@@ -42,6 +44,9 @@
     .triangle-row.active .triangle-cell { background: #d0f0ff; }
 
     pre { background: #f7f7f7; padding: 12px; border-radius: 4px; border: 1px solid #ddd; overflow-x: auto; }
+
+    .problem-toggle { margin-top: 12px; padding: 4px 8px; }
+    .problem-description { margin-top: 12px; padding: 12px; border: 1px solid #ddd; border-radius: 4px; }
   </style>
 </head>
 <body>
@@ -52,6 +57,67 @@
   <button id="generateBtn">Generate Steps</button>
   <button id="nextBtn" disabled>Next Step</button>
   <button id="autoBtn" disabled>Auto&nbsp;Play</button>
+  <button id="prevBtn" disabled>Previous Step</button>
+  <input type="range" id="timeSlider" min="0" value="0" class="time-slider" disabled>
+  <span id="timeDisplay">0 / 0</span>
+  <button id="problemToggle" class="problem-toggle">Show Problem</button>
+</div>
+
+<div id="problemDescription" class="problem-description" style="display: none;">
+  <h3>🎯 Problem: Pascal's Triangle Row Generation</h3>
+  
+  <h4>What is Pascal's Triangle?</h4>
+  <p>Pascal's Triangle is a triangular array of numbers where each number is the sum of the two numbers directly above it. The triangle starts with a single 1 at the top, and each subsequent row has one more element than the previous row.</p>
+  
+  <h4>The Algorithm Problem</h4>
+  <p>Given a row index <code>k</code> (0-indexed), generate the <code>kth</code> row of Pascal's Triangle efficiently.</p>
+  
+  <h4>Example:</h4>
+  <ul>
+    <li>Row 0: <code>[1]</code></li>
+    <li>Row 1: <code>[1, 1]</code></li>
+    <li>Row 2: <code>[1, 2, 1]</code></li>
+    <li>Row 3: <code>[1, 3, 3, 1]</code></li>
+    <li>Row 4: <code>[1, 4, 6, 4, 1]</code></li>
+    <li>Row 5: <code>[1, 5, 10, 10, 5, 1]</code></li>
+  </ul>
+  
+  <h4>Key Challenges:</h4>
+  <ol>
+    <li><strong>Understanding the Pattern:</strong> Each element is the sum of two elements from the previous row</li>
+    <li><strong>Efficient Generation:</strong> Avoid recalculating the entire triangle</li>
+    <li><strong>Space Optimization:</strong> Generate just the target row without storing all previous rows</li>
+    <li><strong>Visual Learning:</strong> Understanding how each value is constructed step-by-step</li>
+  </ol>
+  
+  <h4>The Algorithm Solution:</h4>
+  <pre><code>function getPascalRow(k) {
+    let row = [1];
+    for (let i = 1; i <= k; i++) {
+      row.push(1);  // Add trailing 1
+      for (let j = row.length - 2; j > 0; j--) {
+        row[j] = row[j] + row[j - 1];  // Sum of two elements above
+      }
+    }
+    return row;
+  }</code></pre>
+  
+  <h4>What This Visualization Solves:</h4>
+  <ul>
+    <li><strong>Step-by-Step Understanding:</strong> Shows exactly how each element is calculated</li>
+    <li><strong>Temporal Navigation:</strong> Time slider allows going forwards/backwards through the construction</li>
+    <li><strong>Visual Heatmap:</strong> Color coding shows value distribution within each row</li>
+    <li><strong>Interactive Learning:</strong> Users can pause, reverse, and replay the algorithm execution</li>
+    <li><strong>Educational Value:</strong> Makes abstract mathematical concepts concrete and visual</li>
+  </ul>
+  
+  <h4>Why This Matters:</h4>
+  <ul>
+    <li><strong>Dynamic Programming:</strong> Demonstrates how to build solutions incrementally</li>
+    <li><strong>Mathematical Patterns:</strong> Shows the relationship between binomial coefficients</li>
+    <li><strong>Algorithm Design:</strong> Illustrates efficient space-time tradeoffs</li>
+    <li><strong>Problem-Solving:</strong> Teaches how to break down complex problems into simple steps</li>
+  </ul>
 </div>
 
 <div id="rowContainer"></div>
@@ -70,9 +136,13 @@ const triangleContainer  = document.getElementById('triangleContainer');
 const msg                = document.getElementById('msg');
 const nextBtn            = document.getElementById('nextBtn');
 const autoBtn            = document.getElementById('autoBtn');
+const prevBtn            = document.getElementById('prevBtn');
 const generateBtn        = document.getElementById('generateBtn');
 const rowInput           = document.getElementById('rowInput');
 const codeBlock          = document.getElementById('codeBlock');
+const timeSlider         = document.getElementById('timeSlider');
+const timeDisplay        = document.getElementById('timeDisplay');
+const problemToggle      = document.getElementById('problemToggle');
 
 /* ================= Algorithm displayed ================= */
 codeBlock.textContent = `function getPascalRow(k) {
@@ -87,12 +157,19 @@ codeBlock.textContent = `function getPascalRow(k) {
 }`;
 /* ====================================================== */
 
-let steps = [];        // array of step objects
-let currRow = [];      // underlying array we mutate
-let stepPtr = 0;       // index of next step to execute
-let autoTimer = null;  // interval handle for autoplay
-let lastRowDiv = null; // reference to last (active) triangle row div
-let maxValue = 1;      // track the maximum value seen so far for heatmap
+// Event log system
+let events = [];           // Array of all events
+let currentEventIndex = 0; // Current position in event log
+let autoTimer = null;      // Interval handle for autoplay
+let lastRowDiv = null;     // Reference to last (active) triangle row div
+
+// Event types
+const EVENT_TYPES = {
+  INIT_ROW: 'init_row',
+  ADD_ONE: 'add_one',
+  UPDATE_CELL: 'update_cell',
+  COMPLETE_ROW: 'complete_row'
+};
 
 function getHeatmapColor(value, maxVal) {
   if (maxVal <= 1) return '#ffffff'; // white for base case
@@ -124,14 +201,16 @@ function addTriangleRow(arr, isActive) {
 
   const rowDiv = document.createElement('div');
   rowDiv.className = 'triangle-row ' + (isActive ? 'active' : 'past');
+  
+  // Calculate max value for this specific row
+  const rowMaxValue = Math.max(...arr);
+  
   arr.forEach(v => {
     const c = document.createElement('div');
     c.className = 'triangle-cell';
     c.textContent = v;
-    // Only apply heatmap color to the active (latest) row
-    if (isActive) {
-      c.style.backgroundColor = getHeatmapColor(v, maxValue);
-    }
+    // Apply heatmap color based on this row's maximum value
+    c.style.backgroundColor = getHeatmapColor(v, rowMaxValue);
     rowDiv.appendChild(c);
   });
   triangleContainer.appendChild(rowDiv);
@@ -143,70 +222,162 @@ function updateLatestRowHeatmap() {
   // Only update the latest (active) row with new heatmap colors
   if (lastRowDiv) {
     const cells = lastRowDiv.querySelectorAll('.triangle-cell');
+    const values = Array.from(cells).map(cell => parseInt(cell.textContent));
+    const rowMaxValue = Math.max(...values);
+    
     cells.forEach(cell => {
       const value = parseInt(cell.textContent);
-      cell.style.backgroundColor = getHeatmapColor(value, maxValue);
+      cell.style.backgroundColor = getHeatmapColor(value, rowMaxValue);
     });
   }
 }
 
-// Build the list of steps, capturing rowSize per step
-function buildSteps(target) {
+// Build the event log for the target row
+function buildEventLog(target) {
   triangleContainer.innerHTML = '';
-  rowContainer.innerHTML      = '';
-  msg.textContent             = '';
-  steps        = [];
-  currRow      = [1];
-  lastRowDiv   = null;
-  maxValue     = 1;           // reset max value
-  addTriangleRow([1], false);               // base row is past immediately
+  rowContainer.innerHTML = '';
+  msg.textContent = '';
+  events = [];
+  currentEventIndex = 0;
+  lastRowDiv = null;
+  
+  // Initial row event
+  events.push({
+    type: EVENT_TYPES.INIT_ROW,
+    row: [1],
+    description: 'Initialize with row [1]'
+  });
+  
+  addTriangleRow([1], false); // base row is past immediately
 
   for (let r = 1; r <= target; r++) {
-    currRow.push(1);                        // append trailing 1 (row size now r+1)
+    // Add trailing 1 event
+    events.push({
+      type: EVENT_TYPES.ADD_ONE,
+      rowNum: r,
+      description: `Add trailing 1 to row ${r}`
+    });
+    
     const size = r + 1;
-
+    
+    // Cell update events
     for (let j = size - 2; j > 0; j--) {
-      steps.push({ idx: j, rowSize: size });
+      events.push({
+        type: EVENT_TYPES.UPDATE_CELL,
+        rowNum: r,
+        cellIndex: j,
+        description: `Update cell ${j} in row ${r}`
+      });
     }
-    steps.push({ rowDone: true, rowNum: r, rowSize: size });
+    
+    // Complete row event
+    events.push({
+      type: EVENT_TYPES.COMPLETE_ROW,
+      rowNum: r,
+      description: `Complete row ${r}`
+    });
+  }
+  
+  // Update slider
+  timeSlider.max = events.length - 1;
+  timeSlider.value = 0;
+  updateTimeDisplay();
+}
+
+// Replay events up to a specific index
+function replayToIndex(targetIndex) {
+  // Reset to initial state
+  triangleContainer.innerHTML = '';
+  rowContainer.innerHTML = '';
+  lastRowDiv = null;
+  
+  // Replay events up to target index
+  for (let i = 0; i <= targetIndex; i++) {
+    applyEvent(events[i]);
   }
 }
 
+// Apply a single event
+function applyEvent(event) {
+  switch (event.type) {
+    case EVENT_TYPES.INIT_ROW:
+      renderRow(event.row);
+      addTriangleRow(event.row, false);
+      break;
+      
+    case EVENT_TYPES.ADD_ONE:
+      // This is handled implicitly in the replay
+      break;
+      
+    case EVENT_TYPES.UPDATE_CELL:
+      // Simulate the cell update for visualization
+      const { rowNum, cellIndex } = event;
+      const currentRow = getCurrentRow(rowNum);
+      
+      // Highlight the cells being added
+      renderRow(currentRow, cellIndex - 1, cellIndex);
+      
+      // Update the cell value
+      setTimeout(() => {
+        const newVal = currentRow[cellIndex] + currentRow[cellIndex - 1];
+        currentRow[cellIndex] = newVal;
+        
+        renderRow(currentRow, -1, cellIndex);
+      }, 200);
+      break;
+      
+    case EVENT_TYPES.COMPLETE_ROW:
+      const completedRow = getCurrentRow(event.rowNum);
+      renderRow(completedRow);
+      addTriangleRow(completedRow, true);
+      break;
+  }
+}
+
+// Get the current row at a specific row number
+function getCurrentRow(rowNum) {
+  // Calculate what the row should be at this point
+  const row = [1];
+  for (let i = 1; i <= rowNum; i++) {
+    row.push(1);
+    for (let j = row.length - 2; j > 0; j--) {
+      row[j] = row[j] + row[j - 1];
+    }
+  }
+  return row;
+}
+
+function updateTimeDisplay() {
+  timeDisplay.textContent = `${currentEventIndex} / ${events.length - 1}`;
+}
+
 function nextStep() {
-  if (stepPtr >= steps.length) {
+  if (currentEventIndex >= events.length - 1) {
     finishPlayback();
     return;
   }
+  
+  currentEventIndex++;
+  applyEvent(events[currentEventIndex]);
+  timeSlider.value = currentEventIndex;
+  updateTimeDisplay();
+  updateMessage();
+}
 
-  const step = steps[stepPtr++];
+function prevStep() {
+  if (currentEventIndex <= 0) return;
+  
+  currentEventIndex--;
+  replayToIndex(currentEventIndex);
+  timeSlider.value = currentEventIndex;
+  updateTimeDisplay();
+  updateMessage();
+}
 
-  if (step.rowDone) {
-    renderRow(currRow.slice(0, step.rowSize));
-    addTriangleRow(currRow.slice(0, step.rowSize), true); // mark as active
-    msg.textContent = `Completed row ${step.rowNum}`;
-    return;
+function updateMessage() {
+  if (currentEventIndex < events.length) {
+    msg.textContent = events[currentEventIndex].description;
   }
-
-  const { idx: j, rowSize } = step;
-
-  // Pre‑update highlight
-  renderRow(currRow.slice(0, rowSize), j - 1, j);
-  const newVal = currRow[j] + currRow[j - 1];
-  msg.textContent = `row[${j}] = ${currRow[j]} + ${currRow[j - 1]} = ${newVal}`;
-
-  // Perform update after a short delay so highlight is visible
-  setTimeout(() => {
-    currRow[j] = newVal;
-    
-    // Update max value if necessary
-    if (newVal > maxValue) {
-      maxValue = newVal;
-      updateLatestRowHeatmap();
-    }
-    
-    renderRow(currRow.slice(0, rowSize), -1, j); // highlight updated cell in green
-    msg.textContent = `row[${j}] updated to ${newVal}`;
-  }, 200);
 }
 
 function finishPlayback() {
@@ -225,14 +396,13 @@ function startAutoplay() {
   autoBtn.disabled = true;
   autoTimer = setInterval(() => {
     nextStep();
-    if (stepPtr >= steps.length) {
+    if (currentEventIndex >= events.length - 1) {
       finishPlayback();
     }
   }, 333); // 3 steps per second
 }
 
 // Event wiring
-
 generateBtn.addEventListener('click', () => {
   const idx = Math.max(0, parseInt(rowInput.value, 10) || 0);
 
@@ -242,16 +412,41 @@ generateBtn.addEventListener('click', () => {
     autoTimer = null;
   }
 
-  stepPtr = 0;
-  buildSteps(idx);
-  renderRow([1]);
-  msg.textContent   = 'Generated steps. Click "Next Step" or "Auto Play" to begin.';
-  nextBtn.disabled  = false;
-  autoBtn.disabled  = false;
+  buildEventLog(idx);
+  replayToIndex(0);
+  msg.textContent = 'Generated events. Use slider or buttons to navigate.';
+  nextBtn.disabled = false;
+  autoBtn.disabled = false;
+  prevBtn.disabled = false;
+  timeSlider.disabled = false;
 });
 
 nextBtn.addEventListener('click', nextStep);
+prevBtn.addEventListener('click', prevStep);
 autoBtn.addEventListener('click', startAutoplay);
+
+// Time slider event
+timeSlider.addEventListener('input', () => {
+  const targetIndex = parseInt(timeSlider.value);
+  if (targetIndex !== currentEventIndex) {
+    currentEventIndex = targetIndex;
+    replayToIndex(currentEventIndex);
+    updateTimeDisplay();
+    updateMessage();
+  }
+});
+
+// Problem toggle event
+problemToggle.addEventListener('click', () => {
+  const description = document.getElementById('problemDescription');
+  if (description.style.display === 'none') {
+    description.style.display = 'block';
+    problemToggle.textContent = 'Hide Problem';
+  } else {
+    description.style.display = 'none';
+    problemToggle.textContent = 'Show Problem';
+  }
+});
 </script>
 </body>
 </html>
